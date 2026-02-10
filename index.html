@@ -153,6 +153,19 @@
             font-weight: bold;
             cursor: pointer;
         }
+        
+        .user-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #E5E7EB;
+        }
+        
+        .user-item:hover {
+            background: #F3F4F6;
+        }
     </style>
 </head>
 <body>
@@ -219,21 +232,41 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <script>
-        // ТВОИ КЛЮЧИ УЖЕ ВСТАВЛЕНЫ!
+        // ТВОИ КЛЮЧИ
         const SUPABASE_URL = 'https://hhuoduukifnqbyfmbkcm.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodW9kdXVraWZucWJ5Zm1ia2NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MTQ5OTUsImV4cCI6MjA4NjI5MDk5NX0.M_5VNX28yh7OJV6nwvlrDASVN93H2E2UZfFQOnEp1ns';
         
         // Инициализация Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        let currentUser = localStorage.getItem('vorx_user');
+        let currentUser = null;
         
-        // ПРИ ЗАГРУЗКЕ
-        window.onload = function() {
-            if (currentUser) {
+        // ПРИ ЗАГРУЗКЕ СРАЗУ ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
+        
+        // ПРОВЕРКА АВТОРИЗАЦИИ
+        function checkAuth() {
+            currentUser = localStorage.getItem('vorx_user');
+            console.log('Проверка авторизации, пользователь:', currentUser);
+            
+            if (currentUser && currentUser !== 'null') {
+                // ЕСТЬ АВТОРИЗАЦИЯ - ПОКАЗЫВАЕМ ЧАТ
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('chatSection').style.display = 'flex';
+                document.getElementById('userInfo').style.display = 'block';
+                document.getElementById('currentUser').textContent = currentUser;
+                
+                // ЗАПУСКАЕМ ЧАТ
                 startChat();
+            } else {
+                // НЕТ АВТОРИЗАЦИИ - ПОКАЗЫВАЕМ ФОРМУ ВХОДА
+                document.getElementById('authSection').style.display = 'flex';
+                document.getElementById('chatSection').style.display = 'none';
+                document.getElementById('userInfo').style.display = 'none';
             }
-        };
+        }
         
         // РЕГИСТРАЦИЯ
         async function register() {
@@ -253,12 +286,22 @@
                 return;
             }
             
-            // Сохраняем в localStorage (для простоты)
-            localStorage.setItem('user_' + username, password);
+            if (username.length < 3) {
+                document.getElementById('regError').textContent = 'Логин минимум 3 символа';
+                return;
+            }
             
-            currentUser = username;
+            // Сохраняем в localStorage
+            localStorage.setItem('user_' + username, password);
             localStorage.setItem('vorx_user', username);
-            startChat();
+            
+            // Очищаем поля
+            document.getElementById('regUsername').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regPassword2').value = '';
+            
+            // ПЕРЕЗАГРУЖАЕМ АВТОРИЗАЦИЮ
+            checkAuth();
         }
         
         // ВХОД
@@ -281,67 +324,126 @@
                 return;
             }
             
-            currentUser = username;
+            // Сохраняем авторизацию
             localStorage.setItem('vorx_user', username);
-            startChat();
+            
+            // Очищаем поля
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            
+            // ПЕРЕЗАГРУЖАЕМ АВТОРИЗАЦИЮ
+            checkAuth();
         }
         
         // ЗАПУСК ЧАТА
         async function startChat() {
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('chatSection').style.display = 'flex';
-            document.getElementById('userInfo').style.display = 'block';
-            document.getElementById('currentUser').textContent = currentUser;
+            console.log('Запуск чата для пользователя:', currentUser);
             
-            // Загружаем сообщения
-            await loadMessages();
-            
-            // Слушаем новые сообщения в реальном времени
-            supabase
-                .channel('messages')
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'messages' },
-                    (payload) => {
-                        addMessage(payload.new);
-                    }
-                )
-                .subscribe();
-            
-            document.getElementById('messageInput').focus();
+            try {
+                // Загружаем сообщения
+                await loadMessages();
+                
+                // Слушаем новые сообщения в реальном времени
+                supabase
+                    .channel('messages')
+                    .on('postgres_changes', 
+                        { event: 'INSERT', schema: 'public', table: 'messages' },
+                        (payload) => {
+                            console.log('Новое сообщение:', payload.new);
+                            addMessage(payload.new);
+                        }
+                    )
+                    .subscribe();
+                
+                // Загружаем пользователей
+                loadUsers();
+                
+                // Фокус на поле ввода
+                document.getElementById('messageInput').focus();
+                
+                console.log('Чат успешно запущен!');
+                
+            } catch (error) {
+                console.error('Ошибка запуска чата:', error);
+            }
         }
         
         // ЗАГРУЗИТЬ СООБЩЕНИЯ
         async function loadMessages() {
             try {
-                const { data } = await supabase
+                const { data, error } = await supabase
                     .from('messages')
                     .select('*')
                     .order('created_at', { ascending: true })
                     .limit(100);
                 
-                if (data) {
-                    data.forEach(addMessage);
+                if (error) {
+                    console.log('Ошибка загрузки сообщений:', error);
+                    return;
                 }
+                
+                console.log('Загружено сообщений:', data ? data.length : 0);
+                
+                if (data && data.length > 0) {
+                    const container = document.getElementById('messagesArea');
+                    container.innerHTML = '';
+                    data.forEach(msg => addMessage(msg));
+                }
+                
             } catch (error) {
                 console.log('Ошибка загрузки сообщений:', error);
-                alert('Ошибка подключения к базе. Проверь таблицу messages!');
+            }
+        }
+        
+        // ЗАГРУЗИТЬ ПОЛЬЗОВАТЕЛЕЙ
+        async function loadUsers() {
+            try {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .select('username')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.log('Ошибка загрузки пользователей:', error);
+                    return;
+                }
+                
+                // Уникальные пользователи
+                const uniqueUsers = [...new Set(data.map(item => item.username))];
+                const usersList = document.getElementById('usersList');
+                usersList.innerHTML = '';
+                
+                uniqueUsers.forEach(user => {
+                    if (user) {
+                        const userDiv = document.createElement('div');
+                        userDiv.className = 'user-item';
+                        userDiv.textContent = '👤 ' + user;
+                        usersList.appendChild(userDiv);
+                    }
+                });
+                
+            } catch (error) {
+                console.log('Ошибка загрузки пользователей:', error);
             }
         }
         
         // ДОБАВИТЬ СООБЩЕНИЕ В ЧАТ
         function addMessage(msg) {
+            if (!msg || !msg.username || !msg.text) return;
+            
             const container = document.getElementById('messagesArea');
             const isMy = msg.username === currentUser;
-            const time = new Date(msg.created_at).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
+            const time = msg.created_at ? 
+                new Date(msg.created_at).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                }) : 'только что';
             
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message ' + (isMy ? 'my-message' : '');
             messageDiv.innerHTML = `
                 <div style="font-weight: bold; margin-bottom: 5px;">👤 ${msg.username}</div>
-                ${msg.text}
+                <div style="word-wrap: break-word;">${msg.text}</div>
                 <div style="text-align: right; margin-top: 5px; font-size: 12px; opacity: 0.7;">${time}</div>
             `;
             
@@ -354,9 +456,14 @@
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             
-            if (!text) return;
+            if (!text || !currentUser) {
+                alert('Введите сообщение!');
+                return;
+            }
             
             try {
+                console.log('Отправка сообщения:', text);
+                
                 const { error } = await supabase
                     .from('messages')
                     .insert([{ 
@@ -370,6 +477,7 @@
                     alert('Ошибка отправки: ' + error.message);
                 } else {
                     input.value = '';
+                    input.focus();
                 }
             } catch (error) {
                 console.log('Ошибка отправки:', error);
@@ -379,25 +487,48 @@
         
         // ВЫХОД
         function logout() {
-            currentUser = null;
             localStorage.removeItem('vorx_user');
+            currentUser = null;
             
-            document.getElementById('chatSection').style.display = 'none';
-            document.getElementById('authSection').style.display = 'flex';
-            document.getElementById('userInfo').style.display = 'none';
-            
+            // Очищаем чат
             document.getElementById('messagesArea').innerHTML = '';
-            document.getElementById('loginUsername').value = '';
-            document.getElementById('loginPassword').value = '';
-            document.getElementById('regUsername').value = '';
-            document.getElementById('regPassword').value = '';
-            document.getElementById('regPassword2').value = '';
+            
+            // ПЕРЕЗАГРУЖАЕМ АВТОРИЗАЦИЮ
+            checkAuth();
         }
         
         // ОТПРАВКА ПО ENTER
         document.getElementById('messageInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
         });
+        
+        // ПРОВЕРКА ПОДКЛЮЧЕНИЯ К БАЗЕ
+        async function testConnection() {
+            try {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('Ошибка подключения к базе:', error);
+                    return false;
+                }
+                
+                console.log('Подключение к базе: УСПЕШНО');
+                return true;
+            } catch (error) {
+                console.error('Ошибка подключения:', error);
+                return false;
+            }
+        }
+        
+        // ТЕСТ ПОДКЛЮЧЕНИЯ ПРИ ЗАГРУЗКЕ
+        setTimeout(() => {
+            testConnection();
+        }, 1000);
     </script>
 </body>
 </html>
