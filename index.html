@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VORX Messenger</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        /* ШАПКА */
+        .header {
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            color: white;
+            padding: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 32px;
+            font-weight: 900;
+        }
+        
+        /* АВТОРИЗАЦИЯ */
+        .auth-section {
+            padding: 40px;
+            display: flex;
+            gap: 40px;
+        }
+        
+        .auth-box {
+            flex: 1;
+            padding: 30px;
+            background: #F8FAFC;
+            border-radius: 15px;
+        }
+        
+        .auth-title {
+            font-size: 22px;
+            margin-bottom: 25px;
+            color: #1E293B;
+            font-weight: 700;
+        }
+        
+        .auth-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .auth-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .error {
+            color: #EF4444;
+            margin-top: 10px;
+            text-align: center;
+            min-height: 20px;
+        }
+        
+        /* ЧАТ */
+        .chat-section {
+            display: none;
+            flex-direction: column;
+            height: 700px;
+        }
+        
+        .chat-main {
+            display: flex;
+            flex: 1;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #F8FAFC;
+            border-right: 1px solid #E5E7EB;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .messages-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+            padding: 15px;
+            border-radius: 15px;
+            background: #F3F4F6;
+        }
+        
+        .my-message {
+            margin-left: auto;
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            color: white;
+        }
+        
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid #E5E7EB;
+            display: flex;
+            gap: 10px;
+            background: white;
+        }
+        
+        #messageInput {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        #sendBtn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ШАПКА -->
+        <div class="header">
+            <div class="logo">VORX MESSENGER</div>
+            <div id="userInfo" style="display: none;">
+                <span>👤 <span id="currentUser"></span></span>
+                <button onclick="logout()" style="margin-left: 20px; padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 2px solid white; border-radius: 8px; cursor: pointer;">
+                    Выйти
+                </button>
+            </div>
+        </div>
+        
+        <!-- АВТОРИЗАЦИЯ -->
+        <div id="authSection" class="auth-section">
+            <!-- ВХОД -->
+            <div class="auth-box">
+                <div class="auth-title">Вход</div>
+                <input type="text" id="loginUsername" class="auth-input" placeholder="Логин">
+                <input type="password" id="loginPassword" class="auth-input" placeholder="Пароль">
+                <button onclick="login()" class="auth-btn">ВОЙТИ</button>
+                <div id="loginError" class="error"></div>
+            </div>
+            
+            <!-- РЕГИСТРАЦИЯ -->
+            <div class="auth-box">
+                <div class="auth-title">Регистрация</div>
+                <input type="text" id="regUsername" class="auth-input" placeholder="Придумайте логин">
+                <input type="password" id="regPassword" class="auth-input" placeholder="Придумайте пароль">
+                <input type="password" id="regPassword2" class="auth-input" placeholder="Повторите пароль">
+                <button onclick="register()" class="auth-btn">СОЗДАТЬ АККАУНТ</button>
+                <div id="regError" class="error"></div>
+            </div>
+        </div>
+        
+        <!-- ЧАТ -->
+        <div id="chatSection" class="chat-section">
+            <div class="chat-main">
+                <!-- Пользователи -->
+                <div class="sidebar">
+                    <h3 style="margin-bottom: 15px; color: #1E293B;">Пользователи</h3>
+                    <div id="usersList">
+                        <!-- Список пользователей -->
+                    </div>
+                </div>
+                
+                <!-- Сообщения -->
+                <div class="messages-area" id="messagesArea">
+                    <!-- Сообщения -->
+                </div>
+            </div>
+            
+            <!-- Ввод сообщения -->
+            <div class="input-area">
+                <input type="text" id="messageInput" placeholder="Введите сообщение..." autocomplete="off">
+                <button id="sendBtn" onclick="sendMessage()">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // ТВОИ КЛЮЧИ УЖЕ ВСТАВЛЕНЫ!
+        const SUPABASE_URL = 'https://hhuoduukifnqbyfmbkcm.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodW9kdXVraWZucWJ5Zm1ia2NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MTQ5OTUsImV4cCI6MjA4NjI5MDk5NX0.M_5VNX28yh7OJV6nwvlrDASVN93H2E2UZfFQOnEp1ns';
+        
+        // Инициализация Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let currentUser = localStorage.getItem('vorx_user');
+        
+        // ПРИ ЗАГРУЗКЕ
+        window.onload = function() {
+            if (currentUser) {
+                startChat();
+            }
+        };
+        
+        // РЕГИСТРАЦИЯ
+        async function register() {
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const password2 = document.getElementById('regPassword2').value;
+            
+            document.getElementById('regError').textContent = '';
+            
+            if (!username || !password) {
+                document.getElementById('regError').textContent = 'Заполните все поля';
+                return;
+            }
+            
+            if (password !== password2) {
+                document.getElementById('regError').textContent = 'Пароли не совпадают';
+                return;
+            }
+            
+            // Сохраняем в localStorage (для простоты)
+            localStorage.setItem('user_' + username, password);
+            
+            currentUser = username;
+            localStorage.setItem('vorx_user', username);
+            startChat();
+        }
+        
+        // ВХОД
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            document.getElementById('loginError').textContent = '';
+            
+            if (!username || !password) {
+                document.getElementById('loginError').textContent = 'Заполните все поля';
+                return;
+            }
+            
+            // Проверяем в localStorage
+            const savedPassword = localStorage.getItem('user_' + username);
+            
+            if (!savedPassword || savedPassword !== password) {
+                document.getElementById('loginError').textContent = 'Неверный логин или пароль';
+                return;
+            }
+            
+            currentUser = username;
+            localStorage.setItem('vorx_user', username);
+            startChat();
+        }
+        
+        // ЗАПУСК ЧАТА
+        async function startChat() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('chatSection').style.display = 'flex';
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('currentUser').textContent = currentUser;
+            
+            // Загружаем сообщения
+            await loadMessages();
+            
+            // Слушаем новые сообщения в реальном времени
+            supabase
+                .channel('messages')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'messages' },
+                    (payload) => {
+                        addMessage(payload.new);
+                    }
+                )
+                .subscribe();
+            
+            document.getElementById('messageInput').focus();
+        }
+        
+        // ЗАГРУЗИТЬ СООБЩЕНИЯ
+        async function loadMessages() {
+            try {
+                const { data } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .order('created_at', { ascending: true })
+                    .limit(100);
+                
+                if (data) {
+                    data.forEach(addMessage);
+                }
+            } catch (error) {
+                console.log('Ошибка загрузки сообщений:', error);
+                alert('Ошибка подключения к базе. Проверь таблицу messages!');
+            }
+        }
+        
+        // ДОБАВИТЬ СООБЩЕНИЕ В ЧАТ
+        function addMessage(msg) {
+            const container = document.getElementById('messagesArea');
+            const isMy = msg.username === currentUser;
+            const time = new Date(msg.created_at).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + (isMy ? 'my-message' : '');
+            messageDiv.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px;">👤 ${msg.username}</div>
+                ${msg.text}
+                <div style="text-align: right; margin-top: 5px; font-size: 12px; opacity: 0.7;">${time}</div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // ОТПРАВИТЬ СООБЩЕНИЕ
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .insert([{ 
+                        username: currentUser, 
+                        text: text,
+                        type: 'global'
+                    }]);
+                
+                if (error) {
+                    console.log('Ошибка отправки:', error);
+                    alert('Ошибка отправки: ' + error.message);
+                } else {
+                    input.value = '';
+                }
+            } catch (error) {
+                console.log('Ошибка отправки:', error);
+                alert('Ошибка подключения к базе!');
+            }
+        }
+        
+        // ВЫХОД
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('vorx_user');
+            
+            document.getElementById('chatSection').style.display = 'none';
+            document.getElementById('authSection').style.display = 'flex';
+            document.getElementById('userInfo').style.display = 'none';
+            
+            document.getElementById('messagesArea').innerHTML = '';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('regUsername').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regPassword2').value = '';
+        }
+        
+        // ОТПРАВКА ПО ENTER
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
